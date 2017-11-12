@@ -13,9 +13,6 @@ from typing import List, Tuple, Optional, Dict
 
 TEXTSTART = "1.0"
 RCLICK = "<Button-2>" if platform.system() == "Darwin" else "<Button-3>"
-SELECT_KEY = "E"
-DESELECT_KEY = "D"
-KEY = "<Key>"
 HIGH = True
 LOW = False
 
@@ -195,14 +192,6 @@ class AnnotationApp:
             self.checkpoint.fanno.append((start, stop, LOW))
             self.lower(start, stop)
             # print("removing ({} {})".format(start, stop))
-
-    def keypress(self, event):
-        if repr(event.char).upper() == SELECT_KEY:
-            self.add()
-        elif repr(event.char).upper() == DESELECT_KEY:
-            self.remove()
-        else:
-            return "break"
 
     def highlight(self, start, stop):
         """
