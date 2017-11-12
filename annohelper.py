@@ -234,7 +234,8 @@ class AnnotationApp:
         :return:
         """
         idx1, idx2 = self.text_indices(start, stop)
-        self.text.tag_add("high", idx1, idx2)
+        print(idx1, idx2)
+        self.text.tag_add(HIGH_TAG, idx1, idx2)
 
     def lower(self, start, stop):
         """
@@ -255,7 +256,7 @@ class AnnotationApp:
         :return:
         """
         idx1 = "{} + {} chars".format(TEXTSTART, start)
-        idx2 = "{} + {} chars".format(TEXTSTART, stop - 1)
+        idx2 = "{} + {} chars".format(TEXTSTART, stop)
         return idx1, idx2
 
     def text_range(self, first_idx, last_idx) -> Optional[Tuple[int, int]]:
@@ -265,7 +266,7 @@ class AnnotationApp:
         """
         with suppress(tk.TclError):
             start = (self.text.count(TEXTSTART, first_idx) or [0])[0]
-            stop = self.text.count(TEXTSTART, last_idx)[0] + 1
+            stop = self.text.count(TEXTSTART, last_idx)[0]
             return start, stop
 
     def open(self) -> None:
@@ -330,7 +331,7 @@ class AnnotationApp:
         """
         self.text.delete(TEXTSTART, tk.END)
         self.text.insert(TEXTSTART, text)
-        for start, stop in (span for *span, status in annotations if status == HIGH):
+        for start, stop in (span for *span, status in annotations if status is HIGH):
             self.highlight(start, stop)
 
     def setstatus(self, msg: str):
