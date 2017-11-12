@@ -11,11 +11,21 @@ from itertools import groupby
 from tkinter.filedialog import askopenfilename, asksaveasfilename
 from typing import List, Tuple, Optional, Dict
 
+
+BREAK = "break"
 TEXTSTART = "1.0"
+# buttons and keys
 RCLICK = "<Button-2>" if platform.system() == "Darwin" else "<Button-3>"
+KEY = "<Key>"
+SELECT_KEY = "E"
+DESELECT_KEY = "D"
+# status labels
 HIGH = True
 LOW = False
+# text tag
+HIGH_TAG = "high"
 
+# Markup = Tuple[start, stop, status (either HIGH or LOW)]
 Markup = Tuple[int, int, bool]
 
 
@@ -117,8 +127,8 @@ class StaleText(tk.Text):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.redirector = WidgetRedirector(self)
-        self.insert = self.redirector.register("insert", lambda *a, **k: "break")
-        self.delete = self.redirector.register("delete", lambda *a, **k: "break")
+        self.insert = self.redirector.register("insert", lambda *a, **k: BREAK)
+        self.delete = self.redirector.register("delete", lambda *a, **k: BREAK)
 
 
 class AnnotationApp:
@@ -133,17 +143,18 @@ class AnnotationApp:
         self.menubar.add_cascade(label="File", menu=self.fmenu)
         self.master.configure(menu=self.menubar)
 
-        # Context menu
-        self.popup_menu = tk.Menu(self.master, tearoff=0)
-        self.popup_menu.add_command(label="Add", command=self.add)
-        self.popup_menu.add_command(label="Remove", command=self.remove)
+        # # Context menu
+        # self.popup_menu = tk.Menu(self.master, tearoff=0)
+        # self.popup_menu.add_command(label="Add", command=self.add)
+        # self.popup_menu.add_command(label="Remove", command=self.remove)
 
         # Text window
         self.text = StaleText(self.master)
-        self.text.tag_config("high", background="red", foreground="white")
-        self.text.bind(RCLICK, self.popup)
+        self.text.tag_config(HIGH_TAG, background="red", foreground="white")
+        self.text.tag_bind(HIGH_TAG, RCLICK, self.tagclick)
+        self.text.bind(KEY, self.keypress)
         self.text.config(insertbackground="white")
-        self.text.configure(font="arial 16")
+        self.text.configure(font="arial 18")
         self.text.pack()
 
         # Move buttons and orientation
@@ -161,37 +172,59 @@ class AnnotationApp:
         # Examples
         self.checkpoint: Optional[Checkpoint] = None
 
-    def popup(self, event):
-        """
-        Open the context menu
-        :param event:
-        :return:
-        """
-        try:
-            self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
-        finally:
-            self.popup_menu.grab_release()
+    # def popup(self, event):
+    #     """
+    #     Open the context menu
+    #     :param event:
+    #     :return:
+    #     """
+    #     try:
+    #         self.popup_menu.tk_popup(event.x_root, event.y_root, 0)
+    #     finally:
+    #         self.popup_menu.grab_release()
 
-    def add(self) -> None:
+    def tagclick(self, event):
+        # get the index of the mouse click
+        index = event.widget.index("@{},{}".format(event.x, event.y))
+        # get the indices of all "adj" tags
+        tag_indices = list(event.widget.tag_ranges(HIGH_TAG))
+
+        # iterate them pairwise (start and end index)
+        for start, end in zip(tag_indices[0::2], tag_indices[1::2]):
+            # check if the tag matches the mouse click index
+            if (event.widget.compare(start, "<=", index) and
+                    event.widget.compare(index, "<", end)):
+                self.remove(start, end)
+
+    def add(self, first_idx, last_idx) -> None:
         """
         Add current selection to highlighted annotations
         :return:
         """
         with suppress(TypeError):
-            start, stop = self.selection()
+            start, stop = self.text_range(first_idx, last_idx)
             self.checkpoint.fanno.append((start, stop, HIGH))
             self.highlight(start, stop)
 
-    def remove(self) -> None:
+    def remove(self, first_idx, last_idx) -> None:
         """
         Add current selection to ignored (low) annotations
         :return:
         """
         with suppress(TypeError):
-            start, stop = self.selection()
+            start, stop = self.text_range(first_idx, last_idx)
             self.checkpoint.fanno.append((start, stop, LOW))
             self.lower(start, stop)
             # print("removing ({} {})".format(start, stop))
+
+    def keypress(self, event):
+        with suppress(tk.TclError):
+            if event.char.upper() == SELECT_KEY:
+                self.add(tk.SEL_FIRST, tk.SEL_LAST)
+            elif event.char.upper() == DESELECT_KEY:
+                self.remove(tk.SEL_FIRST, tk.SEL_LAST)
+            else:
+                return BREAK
 
     def highlight(self, start, stop):
         """
@@ -225,14 +258,14 @@ class AnnotationApp:
         idx2 = "{} + {} chars".format(TEXTSTART, stop - 1)
         return idx1, idx2
 
-    def selection(self) -> Optional[Tuple[int, int]]:
+    def text_range(self, first_idx, last_idx) -> Optional[Tuple[int, int]]:
         """
-        Return selected text interval
+        Return selected text range
         :return:
         """
         with suppress(tk.TclError):
-            start = (self.text.count(TEXTSTART, tk.SEL_FIRST) or [0])[0]
-            stop = self.text.count(TEXTSTART, tk.SEL_LAST)[0] + 1
+            start = (self.text.count(TEXTSTART, first_idx) or [0])[0]
+            stop = self.text.count(TEXTSTART, last_idx)[0] + 1
             return start, stop
 
     def open(self) -> None:

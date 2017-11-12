@@ -92,3 +92,6 @@ Temporary Items
 .nfs*
 
 .idea/
+.ipynb_checkpoints/*
+chemdner_corpus
+make_chemdner_anno.ipynb
