@@ -234,7 +234,6 @@ class AnnotationApp:
         :return:
         """
         idx1, idx2 = self.text_indices(start, stop)
-        print(idx1, idx2)
         self.text.tag_add(HIGH_TAG, idx1, idx2)
 
     def lower(self, start, stop):
