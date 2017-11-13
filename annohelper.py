@@ -17,7 +17,7 @@ TEXTSTART = "1.0"
 # buttons and keys
 RCLICK = "<Button-2>" if platform.system() == "Darwin" else "<Button-3>"
 KEY = "<Key>"
-SELECT_KEY = "E"
+SELECT_KEY = "S"
 DESELECT_KEY = "D"
 # status labels
 HIGH = True
